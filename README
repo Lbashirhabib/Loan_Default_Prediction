@@ -1,0 +1,143 @@
+# Loan Default Prediction — Home Credit Risk
+
+A machine learning system that predicts whether a loan applicant
+will default on their repayment, built on the real-world Home Credit
+Default Risk dataset from Kaggle.
+
+## What This Project Does
+
+Most people who need loans have little or no formal credit history.
+Banks reject them. Home Credit tries to serve them — but needs a
+reliable way to assess repayment risk without traditional credit scores.
+
+This project builds that system. Given a loan application with
+demographic and financial information, the model returns a default
+probability, a risk level, and a recommendation — approve, review,
+or reject.
+
+## The Dataset
+
+- Source: [Home Credit Default Risk — Kaggle](https://www.kaggle.com/competitions/home-credit-default-risk)
+- Training rows: 307,511 loan applications
+- Features: 122 columns covering income, employment, credit amounts, and external scores
+- Default rate: 8.07% — severe class imbalance handled via XGBoost scale_pos_weight
+
+
+## What Is Inside the Notebook
+
+The entire pipeline lives in one notebook with eight sections:
+
+1. Setup and data loading
+2. Exploratory data analysis — class imbalance, missing values, age and employment patterns
+3. Data preprocessing — drop high-missing columns, encode categoricals, median imputation
+4. Feature engineering — credit to income ratio, external score aggregates, employment stability ratio
+5. Model training — Logistic Regression baseline, Random Forest, XGBoost
+6. Model evaluation — AUC-ROC, confusion matrix, ROC curve, precision-recall curve
+7. SHAP explainability — which features drive default predictions and in which direction
+8. Model saving — serialized with all preprocessors for clean API deployment
+
+## Models and Results
+
+| Model | AUC-ROC |
+|---|---|
+| Logistic Regression | ~0.72 |
+| Random Forest | ~0.74 |
+| XGBoost | ~0.77 |
+
+XGBoost was selected as the final model. It handles class imbalance
+natively via scale_pos_weight and consistently outperformed the other
+two models on the validation set.
+
+AUC scores in the 0.75 to 0.78 range are expected and honest for this
+dataset using only application_train.csv. Top Kaggle submissions
+reaching 0.80+ used six additional supplementary files. We used one.
+
+## Key Findings from EDA
+
+- Only 8.07% of applicants defaulted — model evaluation uses AUC-ROC not accuracy
+- Younger applicants default at significantly higher rates
+- Shorter employment duration strongly correlates with default risk
+- EXT_SOURCE_2 and EXT_SOURCE_3 (external credit scores) are the strongest predictors
+- The engineered feature CREDIT_INCOME_RATIO ranked highly in feature importance
+
+## Feature Engineering
+
+Six new features were created from existing columns:
+
+- CREDIT_INCOME_RATIO — loan amount relative to annual income
+- ANNUITY_INCOME_RATIO — monthly payment burden relative to income
+- CREDIT_TERM — estimated loan duration in months
+- EXT_SOURCE_MEAN / MIN / MAX — aggregates of three external credit scores
+- EMPLOYED_TO_AGE_RATIO — employment stability relative to applicant age
+
+## API
+
+The model is served via FastAPI on port 8004.
+
+```bash
+uvicorn api.main:app --reload --port 8004
+```
+
+Send a POST request to /predict:
+
+```json
+{
+  "AMT_CREDIT": 500000,
+  "AMT_INCOME_TOTAL": 150000,
+  "AMT_ANNUITY": 25000,
+  "DAYS_BIRTH": -12000,
+  "DAYS_EMPLOYED": -2000,
+  "EXT_SOURCE_2": 0.7,
+  "EXT_SOURCE_3": 0.65
+}
+```
+
+Response:
+
+```json
+{
+  "default_probability": 0.0821,
+  "risk_level": "LOW",
+  "recommendation": "APPROVE"
+}
+```
+
+## How to Run
+
+```bash
+git clone https://github.com/yourusername/loan-default-prediction.git
+cd loan-default-prediction
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+jupyter notebook notebooks/loan_default_prediction.ipynb
+```
+
+Run all cells top to bottom. Then start the API:
+
+```bash
+uvicorn api.main:app --reload --port 8004
+```
+
+## A Note on the Bug I Fixed
+
+During preprocessing, a column called DAYS_EMPLOYED_CLEAN was
+accidentally created during EDA for the training set but never
+applied to the test set. This caused a feature mismatch error
+when the imputer tried to transform the test data.
+
+Fix: dropped DAYS_EMPLOYED_CLEAN before imputation since
+YEARS_EMPLOYED already captured the same information cleanly.
+Lesson: any transformation applied to train must be applied to
+test at the same step.
+
+## Tech Stack
+
+Python, Pandas, NumPy, Scikit-learn, XGBoost, SHAP,
+Matplotlib, Seaborn, FastAPI, MLflow, Jupyter
+
+## Author
+
+Habib Bashir Lawal
+Junior Data Scientist
+Bashirlawal01@gmail.com
