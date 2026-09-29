@@ -22,36 +22,6 @@ or reject.
 - Features: 122 columns covering income, employment, credit amounts, and external scores
 - Default rate: 8.07% — severe class imbalance handled via XGBoost scale_pos_weight
 
-
-## What Is Inside the Notebook
-
-The entire pipeline lives in one notebook with eight sections:
-
-1. Setup and data loading
-2. Exploratory data analysis — class imbalance, missing values, age and employment patterns
-3. Data preprocessing — drop high-missing columns, encode categoricals, median imputation
-4. Feature engineering — credit to income ratio, external score aggregates, employment stability ratio
-5. Model training — Logistic Regression baseline, Random Forest, XGBoost
-6. Model evaluation — AUC-ROC, confusion matrix, ROC curve, precision-recall curve
-7. SHAP explainability — which features drive default predictions and in which direction
-8. Model saving — serialized with all preprocessors for clean API deployment
-
-## Models and Results
-
-| Model | AUC-ROC |
-|---|---|
-| Logistic Regression | ~0.72 |
-| Random Forest | ~0.74 |
-| XGBoost | ~0.77 |
-
-XGBoost was selected as the final model. It handles class imbalance
-natively via scale_pos_weight and consistently outperformed the other
-two models on the validation set.
-
-AUC scores in the 0.75 to 0.78 range are expected and honest for this
-dataset using only application_train.csv. Top Kaggle submissions
-reaching 0.80+ used six additional supplementary files. We used one.
-
 ## Key Findings from EDA
 
 - Only 8.07% of applicants defaulted — model evaluation uses AUC-ROC not accuracy
